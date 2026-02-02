@@ -7,70 +7,83 @@
 
 <style>
 body{
-  margin:0;
-  background:#050505;
-  color:#f5f5f5;
-  font-family:'Trebuchet MS',sans-serif;
+  background:#000;
+  color:#fff;
+  font-family:Arial, sans-serif;
   text-align:center;
-  padding:2rem;
+  padding:30px 10px;
 }
 
-h1{margin-bottom:1.5rem;}
+h2{ font-size:1.4rem; }
 
-#code-inputs{
+#inputs{
   display:flex;
   justify-content:center;
-  gap:12px;
+  gap:10px;
+  margin:20px 0;
 }
 
-input{
-  width:60px;
-  height:70px;
-  font-size:2.2rem;
+input.code{
+  width:55px;
+  height:65px;
+  font-size:2rem;
   text-align:center;
   background:#111;
   color:#fff;
-  border:1px solid #444;
+  border:2px solid #555;
   border-radius:8px;
+  transition:all .3s;
 }
 
-/* pijltjes weg */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button{
+input.code.filled{
+  border-color:#3a6;
+  box-shadow:0 0 10px rgba(0,255,150,.5);
+}
+
+/* geen pijltjes */
+input::-webkit-inner-spin-button,
+input::-webkit-outer-spin-button{
   -webkit-appearance:none;
   margin:0;
 }
-input[type=number]{appearance:textfield;}
+input[type=number]{ -moz-appearance:textfield; }
 
 button{
-  margin-top:25px;
-  padding:10px 22px;
-  font-size:1.1rem;
-  border:none;
-  border-radius:8px;
-  background:#660000;
-  color:white;
+  padding:12px 25px;
+  font-size:1rem;
   cursor:pointer;
-}
-button:hover{background:#880000;}
-
-#result{
-  margin-top:2rem;
-  font-size:1.3rem;
+  margin-top:10px;
+  border-radius:6px;
+  border:none;
 }
 
-#lines{
-  margin-top:2rem;
-  max-width:900px;
-  margin-left:auto;
-  margin-right:auto;
-  text-align:left;
-  font-family:monospace;
-  line-height:1.6;
+/* Oog */
+#eye{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  background:#400;
+  margin:25px auto;
+  position:relative;
+  opacity:0;
 }
 
-#tipBtn{display:none;}
-#tipText{margin-top:1rem;font-style:italic;color:#ffcccc;}
+#pupil{
+  width:28px;
+  height:28px;
+  background:red;
+  border-radius:50%;
+  position:absolute;
+  top:46px;
+  left:46px;
+  transition:left .2s;
+  animation:blink 5s infinite;
+}
+
+@keyframes blink{
+  0%,92%,100%{ transform:scaleY(1); }
+  95%{ transform:scaleY(0.15); }
+}
 
 /* Overlay */
 #overlay{
@@ -79,71 +92,73 @@ button:hover{background:#880000;}
   background:rgba(0,0,0,0.9);
   display:flex;
   flex-direction:column;
-  align-items:center;
   justify-content:center;
+  align-items:center;
   opacity:0;
   pointer-events:none;
-  transition:opacity 0.6s ease;
-  z-index:9999;
+  transition:opacity .3s;
 }
 
 #overlay.active{
   opacity:1;
-  pointer-events:all;
+  pointer-events:auto;
 }
 
-/* Rood oog (langzaam knipperen) */
-#red-eye{
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:radial-gradient(circle, red 0%, #600 40%, transparent 70%);
-  box-shadow:0 0 30px 12px rgba(255,0,0,0.35);
-  animation:eyePulse 4s ease-in-out infinite;
-}
-
-@keyframes eyePulse{
-  0%,100%{transform:scale(1);opacity:0.7;}
-  50%{transform:scale(1.15);opacity:1;}
-}
-
-/* Progress bar */
-#progressBox{
-  width:260px;
-  height:14px;
-  background:#222;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:30px;
+/* Progress */
+#progresswrap{
+  width:80%;
+  max-width:320px;
+  height:18px;
+  border:1px solid #555;
+  margin-top:20px;
 }
 
 #progress{
   height:100%;
   width:0%;
   background:linear-gradient(90deg,#aa0000,#ff4444);
-  transition:width 5s linear;
 }
 
-#checkingText{
-  margin-top:25px;
-  letter-spacing:2px;
-  opacity:0.8;
+#result{
+  margin-top:20px;
+  font-size:1.2rem;
 }
+
+#lines{
+  margin-top:20px;
+  white-space:pre-wrap;
+  text-align:left;
+  max-width:700px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+#tipBtn{ display:none; margin-top:20px; }
+#tipText{ margin-top:10px; font-style:italic; }
+
+audio{ display:none; }
 </style>
 </head>
 
 <body>
 
-<h1>Voer de 4-cijferige code in</h1>
+<h2>Voer de 4-cijferige code in</h2>
 
-<div id="code-inputs">
-  <input type="number" id="c1" min="0" max="9">
-  <input type="number" id="c2" min="0" max="9">
-  <input type="number" id="c3" min="0" max="9">
-  <input type="number" id="c4" min="0" max="9">
+<div id="inputs">
+  <input class="code" type="number" id="c1">
+  <input class="code" type="number" id="c2">
+  <input class="code" type="number" id="c3">
+  <input class="code" type="number" id="c4">
 </div>
 
 <button onclick="checkCode()">Controleer code</button>
+
+<div id="eye"><div id="pupil"></div></div>
+
+<div id="overlay">
+  <div>Code wordt gecontroleerd…</div>
+  <div id="progresswrap"><div id="progress"></div></div>
+</div>
 
 <div id="result"></div>
 <div id="lines"></div>
@@ -151,132 +166,84 @@ button:hover{background:#880000;}
 <button id="tipBtn" onclick="showTip()">Tip!</button>
 <div id="tipText"></div>
 
-<!-- Overlay -->
-<div id="overlay">
-  <div id="red-eye"></div>
-  <div id="progressBox"><div id="progress"></div></div>
-  <div id="checkingText">Code wordt gecontroleerd…</div>
-</div>
+<audio id="good">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+</audio>
+<audio id="bad">
+  <source src="https://actions.google.com/sounds/v1/alarms/buzzer.ogg">
+</audio>
 
 <script>
-const correctCode=[3,7,3,7];
-let audioCtx, modemOsc, modemGain;
+const correct=[3,7,3,7];
+const inputs=[c1,c2,c3,c4];
+const pupil=document.getElementById('pupil');
 
-function startModem(){
-  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  modemOsc=audioCtx.createOscillator();
-  modemGain=audioCtx.createGain();
-  modemOsc.type="square";
-  modemOsc.frequency.setValueAtTime(900,audioCtx.currentTime);
-  modemGain.gain.setValueAtTime(0.04,audioCtx.currentTime);
-  modemOsc.connect(modemGain).connect(audioCtx.destination);
-  modemOsc.start();
-
-  // onrustig moduleren
-  const lfo=audioCtx.createOscillator();
-  const lfoGain=audioCtx.createGain();
-  lfo.frequency.value=6;
-  lfoGain.gain.value=300;
-  lfo.connect(lfoGain).connect(modemOsc.frequency);
-  lfo.start();
-}
-
-function stopModem(){
-  if(!modemGain)return;
-  modemGain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.2);
-  modemOsc.stop(audioCtx.currentTime+0.3);
-}
-
-function errorBeep(){
-  const osc=audioCtx.createOscillator();
-  const gain=audioCtx.createGain();
-  osc.type="square";
-  osc.frequency.value=120;
-  gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime+0.5);
-}
-
-function successTone(){
-  [523,659,784].forEach((f,i)=>{
-    const osc=audioCtx.createOscillator();
-    const gain=audioCtx.createGain();
-    osc.type="sine";
-    osc.frequency.value=f;
-    gain.gain.setValueAtTime(0.09,audioCtx.currentTime);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(audioCtx.currentTime+i*0.05);
-    osc.stop(audioCtx.currentTime+1);
+inputs.forEach((el,i)=>{
+  el.addEventListener('input',()=>{
+    if(el.value.length>0){
+      el.classList.add('filled');
+      if(inputs[i+1]) inputs[i+1].focus();
+    } else {
+      el.classList.remove('filled');
+    }
   });
-}
+});
 
 function checkCode(){
-  const c=[+c1.value,+c2.value,+c3.value,+c4.value];
-
+  const entered=inputs.map(i=>+i.value);
   result.innerHTML='';
   lines.innerHTML='';
   tipBtn.style.display='none';
   tipText.innerHTML='';
+
+  eye.style.opacity=1;
   progress.style.width='0%';
-
   overlay.classList.add('active');
-  startModem();
 
-  setTimeout(()=>progress.style.width='100%',50);
+  progress.style.transition='width 8s linear';
+  setTimeout(()=>progress.style.width='90%',50);
+
+  animateEye(0,90,8000);
 
   setTimeout(()=>{
-    overlay.classList.remove('active');
-    stopModem();
-    finalizeCheck(c);
-  },5000);
+    progress.style.transition='width 2s ease-out';
+    progress.style.width='100%';
+    animateEye(90,100,2000);
+  },8000);
+
+  setTimeout(()=>finalizeCheck(entered),10000);
 }
 
-function finalizeCheck(c){
-  let errors=0;
-  for(let i=0;i<4;i++) if(c[i]!==correctCode[i]) errors++;
+function animateEye(from,to,duration){
+  const start=Date.now();
+  const timer=setInterval(()=>{
+    const p=Math.min((Date.now()-start)/duration,1);
+    const percent=from+(to-from)*p;
+    pupil.style.left=30+(percent/100)*60+'px';
+    if(p>=1) clearInterval(timer);
+  },50);
+}
 
-  if(errors>0){
-    errorBeep();
-    result.innerHTML=`<span style="color:red;">Code incorrect</span><br>${errors} cijfer(s) fout.`;
-  }else{
-    successTone();
-    result.innerHTML=`<span style="color:lime;">Code correct</span>`;
+function finalizeCheck(code){
+  overlay.classList.remove('active');
+  let wrong=0;
+  code.forEach((v,i)=>{ if(v!==correct[i]) wrong++; });
 
-    const tekst=[
-"1) 6 niks, 4 blauw, 6 niks",
-"2) 5 niks, 1 blauw, 3 roze, 1 blauw, 6 niks",
-"3) 4 niks, 1 blauw, 2 roze, 2 blauw, 7 niks",
-"4) 3 niks, 1 blauw, 1 groen, 1 geel, 2 groen, 1 blauw, 7 niks",
-"5) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 1 blauw, 1 niks, 4 blauw, 1 niks",
-"6) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 2 blauw, 1 groen, 2 geel, 1 groen, 1 blauw",
-"7) 1 niks, 1 blauw, 2 oranje, 1 groen, 4 geel, 1 blauw, 1 groen, 1 geel, 1 groen, 1 geel, 1 groen, 1 blauw",
-"8) 2 niks, 2 blauw, 5 geel, 1 groen, 4 geel, 1 blauw, 1 niks",
-"9) 1 niks, 1 blauw, 2 groen, 3 gecl, 2 groen, 3 geel, 1 groen, 2 geol, 1 blauw",
-"10) 1 blauw, 2 groen, 5 geel, 1 groen, 1 blauw, 1 geel, 1 groen, 1 blauw, 2 geel, 1 blauw",
-"11) 1 blauw, 3 groen, 1 geel, 1 groen, 3 geel, 1 groen, 2 blauw, 1 groen, 1 geel, 1 blauw, 1 niks",
-"12) 1 blauw, 2 groen, 1 geel, 1 groen, 1 geel, 1 groen, 7 geel, 1 blauw, 1 niks",
-"13) 1 niks, 2 blauw, 1 groen, 8 geel, 1 groen, 1 blauw, 2 niks",
-"14) 2 niks, 2 blauw, 1 groen, 5 geel, 2 groen, 2 blauw, 2 niks",
-"15) 3 niks, 10 blauw, 3 niks",
-"16) 2 niks, 1 blauw, 3 oranje, 1 blauw, 3 oranje, 1 blauw, 5 niks"
-    ];
-
-    tekst.forEach(t=>{
-      const p=document.createElement("p");
-      p.textContent=t;
-      lines.appendChild(p);
-    });
-
+  if(wrong===0){
+    good.play();
+    result.innerHTML='✅ Code correct!';
+    lines.innerHTML=`(bouwpatroon zoals aangeleverd)`;
     tipBtn.style.display='inline-block';
+  } else {
+    bad.play();
+    result.innerHTML=`❌ Code incorrect — ${wrong} cijfer(s) fout`;
   }
 }
 
 function showTip(){
-  tipText.textContent="14122210 Hema";
+  tipText.innerHTML='14122210 Hema';
 }
 </script>
 
 </body>
 </html>
-
