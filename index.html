@@ -17,18 +17,24 @@ body{
 
 h1{margin-bottom:1.5rem;}
 
+#code-inputs{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+}
+
 input{
   width:60px;
-  font-size:2rem;
+  height:70px;
+  font-size:2.2rem;
   text-align:center;
-  margin:0 6px;
   background:#111;
   color:#fff;
   border:1px solid #444;
-  border-radius:6px;
+  border-radius:8px;
 }
 
-/* verwijder pijltjes */
+/* pijltjes weg */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button{
   -webkit-appearance:none;
@@ -66,18 +72,18 @@ button:hover{background:#880000;}
 #tipBtn{display:none;}
 #tipText{margin-top:1rem;font-style:italic;color:#ffcccc;}
 
-/* Overlay + oog */
+/* Overlay */
 #overlay{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,0.85);
+  background:rgba(0,0,0,0.9);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   opacity:0;
   pointer-events:none;
-  transition:opacity 1s ease;
+  transition:opacity 0.6s ease;
   z-index:9999;
 }
 
@@ -86,25 +92,42 @@ button:hover{background:#880000;}
   pointer-events:all;
 }
 
+/* Rood oog (langzaam knipperen) */
 #red-eye{
-  width:90px;
-  height:90px;
+  width:70px;
+  height:70px;
   border-radius:50%;
   background:radial-gradient(circle, red 0%, #600 40%, transparent 70%);
-  box-shadow:0 0 50px 20px rgba(255,0,0,0.4);
-  animation:slowZoom 5s linear forwards;
+  box-shadow:0 0 30px 12px rgba(255,0,0,0.35);
+  animation:eyePulse 4s ease-in-out infinite;
 }
 
-@keyframes slowZoom{
-  from{transform:scale(1);}
-  to{transform:scale(2.5);}
+@keyframes eyePulse{
+  0%,100%{transform:scale(1);opacity:0.7;}
+  50%{transform:scale(1.15);opacity:1;}
+}
+
+/* Progress bar */
+#progressBox{
+  width:260px;
+  height:14px;
+  background:#222;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:30px;
+}
+
+#progress{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#aa0000,#ff4444);
+  transition:width 5s linear;
 }
 
 #checkingText{
-  margin-top:30px;
-  font-size:1.4rem;
+  margin-top:25px;
   letter-spacing:2px;
-  opacity:0.85;
+  opacity:0.8;
 }
 </style>
 </head>
@@ -113,7 +136,7 @@ button:hover{background:#880000;}
 
 <h1>Voer de 4-cijferige code in</h1>
 
-<div>
+<div id="code-inputs">
   <input type="number" id="c1" min="0" max="9">
   <input type="number" id="c2" min="0" max="9">
   <input type="number" id="c3" min="0" max="9">
@@ -131,81 +154,80 @@ button:hover{background:#880000;}
 <!-- Overlay -->
 <div id="overlay">
   <div id="red-eye"></div>
-  <div id="checkingText"></div>
+  <div id="progressBox"><div id="progress"></div></div>
+  <div id="checkingText">Code wordt gecontroleerd…</div>
 </div>
 
 <script>
 const correctCode=[3,7,3,7];
-let audioCtx, droneOsc, droneGain;
+let audioCtx, modemOsc, modemGain;
 
-/* audio */
-function startDrone(){
+function startModem(){
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  droneOsc=audioCtx.createOscillator();
-  droneGain=audioCtx.createGain();
-  droneOsc.type="sawtooth";
-  droneOsc.frequency.value=55;
-  droneGain.gain.setValueAtTime(0.0001,audioCtx.currentTime);
-  droneGain.gain.exponentialRampToValueAtTime(0.05,audioCtx.currentTime+3);
-  droneOsc.connect(droneGain).connect(audioCtx.destination);
-  droneOsc.start();
+  modemOsc=audioCtx.createOscillator();
+  modemGain=audioCtx.createGain();
+  modemOsc.type="square";
+  modemOsc.frequency.setValueAtTime(900,audioCtx.currentTime);
+  modemGain.gain.setValueAtTime(0.04,audioCtx.currentTime);
+  modemOsc.connect(modemGain).connect(audioCtx.destination);
+  modemOsc.start();
+
+  // onrustig moduleren
+  const lfo=audioCtx.createOscillator();
+  const lfoGain=audioCtx.createGain();
+  lfo.frequency.value=6;
+  lfoGain.gain.value=300;
+  lfo.connect(lfoGain).connect(modemOsc.frequency);
+  lfo.start();
 }
 
-function stopDrone(){
-  if(!droneGain)return;
-  droneGain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.5);
-  droneOsc.stop(audioCtx.currentTime+0.6);
+function stopModem(){
+  if(!modemGain)return;
+  modemGain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.2);
+  modemOsc.stop(audioCtx.currentTime+0.3);
 }
 
-function errorBuzz(){
+function errorBeep(){
   const osc=audioCtx.createOscillator();
   const gain=audioCtx.createGain();
   osc.type="square";
-  osc.frequency.value=90;
-  gain.gain.setValueAtTime(0.12,audioCtx.currentTime);
+  osc.frequency.value=120;
+  gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
   osc.connect(gain).connect(audioCtx.destination);
   osc.start();
-  osc.stop(audioCtx.currentTime+0.6);
+  osc.stop(audioCtx.currentTime+0.5);
 }
 
 function successTone(){
-  [440,660,880].forEach((f,i)=>{
+  [523,659,784].forEach((f,i)=>{
     const osc=audioCtx.createOscillator();
     const gain=audioCtx.createGain();
     osc.type="sine";
     osc.frequency.value=f;
-    gain.gain.setValueAtTime(0.08,audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.09,audioCtx.currentTime);
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(audioCtx.currentTime+i*0.05);
-    osc.stop(audioCtx.currentTime+1.2);
+    osc.stop(audioCtx.currentTime+1);
   });
 }
 
-/* check */
 function checkCode(){
-  const c=[
-    +c1.value,+c2.value,+c3.value,+c4.value
-  ];
+  const c=[+c1.value,+c2.value,+c3.value,+c4.value];
 
   result.innerHTML='';
   lines.innerHTML='';
   tipBtn.style.display='none';
   tipText.innerHTML='';
+  progress.style.width='0%';
 
   overlay.classList.add('active');
-  checkingText.textContent='';
-  startDrone();
+  startModem();
 
-  const msg="Code wordt gecontroleerd…";
-  let i=0;
-  const typer=setInterval(()=>{
-    checkingText.textContent+=msg[i++];
-    if(i>=msg.length)clearInterval(typer);
-  },120);
+  setTimeout(()=>progress.style.width='100%',50);
 
   setTimeout(()=>{
     overlay.classList.remove('active');
-    stopDrone();
+    stopModem();
     finalizeCheck(c);
   },5000);
 }
@@ -215,7 +237,7 @@ function finalizeCheck(c){
   for(let i=0;i<4;i++) if(c[i]!==correctCode[i]) errors++;
 
   if(errors>0){
-    errorBuzz();
+    errorBeep();
     result.innerHTML=`<span style="color:red;">Code incorrect</span><br>${errors} cijfer(s) fout.`;
   }else{
     successTone();
@@ -251,10 +273,9 @@ function finalizeCheck(c){
 }
 
 function showTip(){
-  tipText.textContent="14122210 Hema";
+  tipText.textContent="Artikelnummer 14122210 Hema";
 }
 </script>
 
 </body>
 </html>
-
