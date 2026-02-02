@@ -3,144 +3,255 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Code Check</title>
+<title>Codecontrole</title>
+
 <style>
-body {background:#050505;color:#f5f5f5;font-family:'Trebuchet MS',sans-serif;text-align:center;padding:2rem;}
-#red-eye{position:fixed;width:26px;height:26px;border-radius:50%;
-background:radial-gradient(circle, red 0%, rgba(255,0,0,0.4) 40%, transparent 70%);
-box-shadow:0 0 20px 8px rgba(255,0,0,0.4);
-opacity:0;pointer-events:none;transition:opacity 2s ease;z-index:9999;animation:pulse 4s infinite;}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-input {width:50px;font-size:2rem;text-align:center;margin:0 5px;}
-input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;} /* verwijder pijltjes */
-button {margin-top:20px;padding:10px 20px;font-size:1.2rem;border:none;border-radius:8px;background:#660000;color:white;cursor:pointer;}
+body{
+  margin:0;
+  background:#050505;
+  color:#f5f5f5;
+  font-family:'Trebuchet MS',sans-serif;
+  text-align:center;
+  padding:2rem;
+}
+
+h1{margin-bottom:1.5rem;}
+
+input{
+  width:60px;
+  font-size:2rem;
+  text-align:center;
+  margin:0 6px;
+  background:#111;
+  color:#fff;
+  border:1px solid #444;
+  border-radius:6px;
+}
+
+/* verwijder pijltjes */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+input[type=number]{appearance:textfield;}
+
+button{
+  margin-top:25px;
+  padding:10px 22px;
+  font-size:1.1rem;
+  border:none;
+  border-radius:8px;
+  background:#660000;
+  color:white;
+  cursor:pointer;
+}
 button:hover{background:#880000;}
-#result{margin-top:2rem;font-size:1.2rem;}
-#lines{margin-top:2rem;text-align:left;max-width:700px;margin-left:auto;margin-right:auto;font-family:monospace;}
-#tipBtn{margin-top:1rem;}
-#tipText{margin-top:1rem;font-size:1.1rem;color:orange;}
-.loader{margin:2rem auto;width:80%;height:20px;background:#222;border-radius:10px;overflow:hidden;}
-.bar{height:100%;width:0%;background:linear-gradient(90deg,#ff3b3b,#ff9900);}
+
+#result{
+  margin-top:2rem;
+  font-size:1.3rem;
+}
+
+#lines{
+  margin-top:2rem;
+  max-width:900px;
+  margin-left:auto;
+  margin-right:auto;
+  text-align:left;
+  font-family:monospace;
+  line-height:1.6;
+}
+
+#tipBtn{display:none;}
+#tipText{margin-top:1rem;font-style:italic;color:#ffcccc;}
+
+/* Overlay + oog */
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 1s ease;
+  z-index:9999;
+}
+
+#overlay.active{
+  opacity:1;
+  pointer-events:all;
+}
+
+#red-eye{
+  width:90px;
+  height:90px;
+  border-radius:50%;
+  background:radial-gradient(circle, red 0%, #600 40%, transparent 70%);
+  box-shadow:0 0 50px 20px rgba(255,0,0,0.4);
+  animation:slowZoom 5s linear forwards;
+}
+
+@keyframes slowZoom{
+  from{transform:scale(1);}
+  to{transform:scale(2.5);}
+}
+
+#checkingText{
+  margin-top:30px;
+  font-size:1.4rem;
+  letter-spacing:2px;
+  opacity:0.85;
+}
 </style>
 </head>
+
 <body>
 
-<div id="red-eye"></div>
-
 <h1>Voer de 4-cijferige code in</h1>
-<div>
-  <input type="text" id="c1" maxlength="1" pattern="[0-9]">
-  <input type="text" id="c2" maxlength="1" pattern="[0-9]">
-  <input type="text" id="c3" maxlength="1" pattern="[0-9]">
-  <input type="text" id="c4" maxlength="1" pattern="[0-9]">
-</div>
-<button onclick="checkCode()">Controleer code</button>
 
-<div class="loader" style="display:none;"><div class="bar" id="bar"></div></div>
+<div>
+  <input type="number" id="c1" min="0" max="9">
+  <input type="number" id="c2" min="0" max="9">
+  <input type="number" id="c3" min="0" max="9">
+  <input type="number" id="c4" min="0" max="9">
+</div>
+
+<button onclick="checkCode()">Controleer code</button>
 
 <div id="result"></div>
 <div id="lines"></div>
-<button id="tipBtn" style="display:none;" onclick="showTip()">Tip</button>
+
+<button id="tipBtn" onclick="showTip()">Tip!</button>
 <div id="tipText"></div>
 
+<!-- Overlay -->
+<div id="overlay">
+  <div id="red-eye"></div>
+  <div id="checkingText"></div>
+</div>
+
 <script>
-// Juiste code
-const correctCode = [3,7,3,7];
-const eye = document.getElementById('red-eye');
+const correctCode=[3,7,3,7];
+let audioCtx, droneOsc, droneGain;
 
-function moveEye(){
-  eye.style.left=Math.random()*(window.innerWidth-40)+'px';
-  eye.style.top=Math.random()*(window.innerHeight-40)+'px';
-  eye.style.opacity=1;
-  setTimeout(()=>eye.style.opacity=0,3000);
+/* audio */
+function startDrone(){
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  droneOsc=audioCtx.createOscillator();
+  droneGain=audioCtx.createGain();
+  droneOsc.type="sawtooth";
+  droneOsc.frequency.value=55;
+  droneGain.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+  droneGain.gain.exponentialRampToValueAtTime(0.05,audioCtx.currentTime+3);
+  droneOsc.connect(droneGain).connect(audioCtx.destination);
+  droneOsc.start();
 }
 
-// Spannend bliepje
-function beep(frequency,duration){
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  oscillator.type='square';
-  oscillator.frequency.value=frequency;
-  gain.gain.setValueAtTime(0.1,audioCtx.currentTime);
-  oscillator.connect(gain).connect(audioCtx.destination);
-  oscillator.start();
-  oscillator.stop(audioCtx.currentTime+duration/1000);
+function stopDrone(){
+  if(!droneGain)return;
+  droneGain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.5);
+  droneOsc.stop(audioCtx.currentTime+0.6);
 }
 
-// Controleer code met spannend effect
+function errorBuzz(){
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.type="square";
+  osc.frequency.value=90;
+  gain.gain.setValueAtTime(0.12,audioCtx.currentTime);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.6);
+}
+
+function successTone(){
+  [440,660,880].forEach((f,i)=>{
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.type="sine";
+    osc.frequency.value=f;
+    gain.gain.setValueAtTime(0.08,audioCtx.currentTime);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime+i*0.05);
+    osc.stop(audioCtx.currentTime+1.2);
+  });
+}
+
+/* check */
 function checkCode(){
-  const c = [
-    +document.getElementById('c1').value,
-    +document.getElementById('c2').value,
-    +document.getElementById('c3').value,
-    +document.getElementById('c4').value
+  const c=[
+    +c1.value,+c2.value,+c3.value,+c4.value
   ];
 
-  document.getElementById('result').innerHTML='';
-  document.getElementById('lines').innerHTML='';
-  document.getElementById('tipBtn').style.display='none';
-  document.getElementById('tipText').innerHTML='';
+  result.innerHTML='';
+  lines.innerHTML='';
+  tipBtn.style.display='none';
+  tipText.innerHTML='';
 
-  const loader = document.querySelector('.loader');
-  const bar = document.getElementById('bar');
-  loader.style.display='block';
-  bar.style.width='0%';
+  overlay.classList.add('active');
+  checkingText.textContent='';
+  startDrone();
 
-  let progress = 0;
-  const interval = setInterval(()=>{
-    progress += 1;
-    bar.style.width = progress+'%';
-    moveEye();
-    beep(200+progress*3,50); // oplopende toon
-    if(progress>=100){
-      clearInterval(interval);
-      loader.style.display='none';
-      finalizeCheck(c);
-    }
-  },50); // 50ms * 100 = 5 seconden
+  const msg="Code wordt gecontroleerd…";
+  let i=0;
+  const typer=setInterval(()=>{
+    checkingText.textContent+=msg[i++];
+    if(i>=msg.length)clearInterval(typer);
+  },120);
+
+  setTimeout(()=>{
+    overlay.classList.remove('active');
+    stopDrone();
+    finalizeCheck(c);
+  },5000);
 }
 
 function finalizeCheck(c){
   let errors=0;
-  for(let i=0;i<4;i++){if(c[i]!==correctCode[i]) errors++;}
-
-  const resultDiv = document.getElementById('result');
-  const linesDiv = document.getElementById('lines');
+  for(let i=0;i<4;i++) if(c[i]!==correctCode[i]) errors++;
 
   if(errors>0){
-    resultDiv.innerHTML=`<span style="color:red;font-size:1.5rem;">Code incorrect!</span><br>Er zijn ${errors} cijfers fout.`;
-  } else {
-    resultDiv.innerHTML=`<span style="color:lime;font-size:1.5rem;">Code correct!</span>`;
-    const tekst = [
-      "1) 6 niks, 4 blauw, 6 niks",
-      "2) 5 niks, 1 blauw, 3 roze, 1 blauw, 6 niks",
-      "3) 4 niks, 1 blauw, 2 roze, 2 blauw, 7 niks",
-      "4) 3 niks, 1 blauw, 1 groen, 1 geel, 2 groen, 1 blauw, 7 niks",
-      "5) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 1 blauw, 1 niks, 4 blauw, 1 niks",
-      "6) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 2 blauw, 1 groen, 2 geel, 1 groen, 1 blauw",
-      "7) 1 niks, 1 blauw, 2 oranje, 1 groen, 4 geel, 1 blauw, 1 groen, 1 geel, 1 groen, 1 geel, 1 groen, 1 blauw",
-      "8) 2 niks, 2 blauw, 5 geel, 1 groen, 4 geel, 1 blauw, 1 niks",
-      "9) 1 niks, 1 blauw, 2 groen, 3 gecl, 2 groen, 3 geel, 1 groen, 2 geol, 1 blauw",
-      "10) 1 blauw, 2 groen, 5 geel, 1 groen, 1 blauw, 1 geel, 1 groen, 1 blauw, 2 geel, 1 blauw",
-      "11) 1 blauw, 3 groen, 1 geel, 1 groen, 3 geel, 1 groen, 2 blauw, 1 groen, 1 geel, 1 blauw, 1 niks",
-      "12) 1 blauw, 2 groen, 1 geel, 1 groen, 1 geel, 1 groen, 7 geel, 1 blauw, 1 niks",
-      "13) 1 niks, 2 blauw, 1 groen, 8 geel, 1 groen, 1 blauw, 2 niks",
-      "14) 2 niks, 2 blauw, 1 groen, 5 geel, 2 groen, 2 blauw, 2 niks",
-      "15) 3 niks, 10 blauw, 3 niks",
-      "16) 2 niks, 1 blauw, 3 oranje, 1 blauw, 3 oranje, 1 blauw, 5 niks"
+    errorBuzz();
+    result.innerHTML=`<span style="color:red;">Code incorrect</span><br>${errors} cijfer(s) fout.`;
+  }else{
+    successTone();
+    result.innerHTML=`<span style="color:lime;">Code correct</span>`;
+
+    const tekst=[
+"1) 6 niks, 4 blauw, 6 niks",
+"2) 5 niks, 1 blauw, 3 roze, 1 blauw, 6 niks",
+"3) 4 niks, 1 blauw, 2 roze, 2 blauw, 7 niks",
+"4) 3 niks, 1 blauw, 1 groen, 1 geel, 2 groen, 1 blauw, 7 niks",
+"5) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 1 blauw, 1 niks, 4 blauw, 1 niks",
+"6) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 2 blauw, 1 groen, 2 geel, 1 groen, 1 blauw",
+"7) 1 niks, 1 blauw, 2 oranje, 1 groen, 4 geel, 1 blauw, 1 groen, 1 geel, 1 groen, 1 geel, 1 groen, 1 blauw",
+"8) 2 niks, 2 blauw, 5 geel, 1 groen, 4 geel, 1 blauw, 1 niks",
+"9) 1 niks, 1 blauw, 2 groen, 3 gecl, 2 groen, 3 geel, 1 groen, 2 geol, 1 blauw",
+"10) 1 blauw, 2 groen, 5 geel, 1 groen, 1 blauw, 1 geel, 1 groen, 1 blauw, 2 geel, 1 blauw",
+"11) 1 blauw, 3 groen, 1 geel, 1 groen, 3 geel, 1 groen, 2 blauw, 1 groen, 1 geel, 1 blauw, 1 niks",
+"12) 1 blauw, 2 groen, 1 geel, 1 groen, 1 geel, 1 groen, 7 geel, 1 blauw, 1 niks",
+"13) 1 niks, 2 blauw, 1 groen, 8 geel, 1 groen, 1 blauw, 2 niks",
+"14) 2 niks, 2 blauw, 1 groen, 5 geel, 2 groen, 2 blauw, 2 niks",
+"15) 3 niks, 10 blauw, 3 niks",
+"16) 2 niks, 1 blauw, 3 oranje, 1 blauw, 3 oranje, 1 blauw, 5 niks"
     ];
-    tekst.forEach(line=>{
-      const p = document.createElement('p');
-      p.textContent = line;
-      linesDiv.appendChild(p);
+
+    tekst.forEach(t=>{
+      const p=document.createElement("p");
+      p.textContent=t;
+      lines.appendChild(p);
     });
-    document.getElementById('tipBtn').style.display='inline-block';
+
+    tipBtn.style.display='inline-block';
   }
 }
 
 function showTip(){
-  document.getElementById('tipText').textContent="Artikelnummer 14122210 Hema";
+  tipText.textContent="Artikelnummer 14122210 Hema";
 }
 </script>
 
