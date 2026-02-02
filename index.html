@@ -19,8 +19,8 @@ h2{ font-size:1.4rem; }
 #inputs{
   display:flex;
   justify-content:center;
-  gap:10px;
-  margin:20px 0;
+  gap:12px;
+  margin:25px 0;
 }
 
 input.code{
@@ -32,12 +32,13 @@ input.code{
   color:#fff;
   border:2px solid #555;
   border-radius:8px;
-  transition:all .3s;
+  transition:all .2s;
 }
 
+/* vastklikken */
 input.code.filled{
-  border-color:#3a6;
-  box-shadow:0 0 10px rgba(0,255,150,.5);
+  border-color:#66aa88;
+  box-shadow:0 0 12px rgba(120,255,180,.6);
 }
 
 /* geen pijltjes */
@@ -52,40 +53,15 @@ button{
   padding:12px 25px;
   font-size:1rem;
   cursor:pointer;
-  margin-top:10px;
   border-radius:6px;
   border:none;
+  background:#333;
+  color:white;
 }
 
-/* Oog */
-#eye{
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  background:#400;
-  margin:25px auto;
-  position:relative;
-  opacity:0;
-}
+button:hover{ background:#555; }
 
-#pupil{
-  width:28px;
-  height:28px;
-  background:red;
-  border-radius:50%;
-  position:absolute;
-  top:46px;
-  left:46px;
-  transition:left .2s;
-  animation:blink 5s infinite;
-}
-
-@keyframes blink{
-  0%,92%,100%{ transform:scaleY(1); }
-  95%{ transform:scaleY(0.15); }
-}
-
-/* Overlay */
+/* overlay */
 #overlay{
   position:fixed;
   inset:0;
@@ -104,7 +80,6 @@ button{
   pointer-events:auto;
 }
 
-/* Progress */
 #progresswrap{
   width:80%;
   max-width:320px;
@@ -116,11 +91,11 @@ button{
 #progress{
   height:100%;
   width:0%;
-  background:linear-gradient(90deg,#aa0000,#ff4444);
+  background:linear-gradient(90deg,#770000,#ff4444);
 }
 
 #result{
-  margin-top:20px;
+  margin-top:25px;
   font-size:1.2rem;
 }
 
@@ -128,15 +103,20 @@ button{
   margin-top:20px;
   white-space:pre-wrap;
   text-align:left;
-  max-width:700px;
+  max-width:750px;
   margin-left:auto;
   margin-right:auto;
 }
 
-#tipBtn{ display:none; margin-top:20px; }
-#tipText{ margin-top:10px; font-style:italic; }
+#tipBtn{
+  display:none;
+  margin-top:20px;
+}
 
-audio{ display:none; }
+#tipText{
+  margin-top:10px;
+  font-style:italic;
+}
 </style>
 </head>
 
@@ -145,15 +125,13 @@ audio{ display:none; }
 <h2>Voer de 4-cijferige code in</h2>
 
 <div id="inputs">
-  <input class="code" type="number" id="c1">
-  <input class="code" type="number" id="c2">
-  <input class="code" type="number" id="c3">
-  <input class="code" type="number" id="c4">
+  <input class="code" type="number" id="c1" maxlength="1">
+  <input class="code" type="number" id="c2" maxlength="1">
+  <input class="code" type="number" id="c3" maxlength="1">
+  <input class="code" type="number" id="c4" maxlength="1">
 </div>
 
 <button onclick="checkCode()">Controleer code</button>
-
-<div id="eye"><div id="pupil"></div></div>
 
 <div id="overlay">
   <div>Code wordt gecontroleerd…</div>
@@ -166,22 +144,45 @@ audio{ display:none; }
 <button id="tipBtn" onclick="showTip()">Tip!</button>
 <div id="tipText"></div>
 
-<audio id="good">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
-</audio>
-<audio id="bad">
-  <source src="https://actions.google.com/sounds/v1/alarms/buzzer.ogg">
-</audio>
-
 <script>
+/* ==== AUDIO ==== */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function beep(freq, dur, type="sine", vol=0.1){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = vol;
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+}
+
+function clickSound(){
+  beep(1200,0.05,"square",0.05);
+}
+
+function goodSound(){
+  beep(523,0.15);
+  setTimeout(()=>beep(659,0.15),150);
+  setTimeout(()=>beep(784,0.25),300);
+}
+
+function badSound(){
+  beep(120,0.4,"sawtooth",0.15);
+}
+
+/* ==== LOGICA ==== */
 const correct=[3,7,3,7];
 const inputs=[c1,c2,c3,c4];
-const pupil=document.getElementById('pupil');
 
 inputs.forEach((el,i)=>{
   el.addEventListener('input',()=>{
     if(el.value.length>0){
+      el.value = el.value.slice(0,1);
       el.classList.add('filled');
+      clickSound();
       if(inputs[i+1]) inputs[i+1].focus();
     } else {
       el.classList.remove('filled');
@@ -190,52 +191,70 @@ inputs.forEach((el,i)=>{
 });
 
 function checkCode(){
+  audioCtx.resume();
+
   const entered=inputs.map(i=>+i.value);
   result.innerHTML='';
   lines.innerHTML='';
   tipBtn.style.display='none';
   tipText.innerHTML='';
 
-  eye.style.opacity=1;
+  progress.style.transition='none';
   progress.style.width='0%';
+
   overlay.classList.add('active');
 
-  progress.style.transition='width 8s linear';
-  setTimeout(()=>progress.style.width='90%',50);
-
-  animateEye(0,90,8000);
-
   setTimeout(()=>{
-    progress.style.transition='width 2s ease-out';
+    progress.style.transition='width 10s linear';
     progress.style.width='100%';
-    animateEye(90,100,2000);
-  },8000);
+  },50);
 
   setTimeout(()=>finalizeCheck(entered),10000);
 }
 
-function animateEye(from,to,duration){
-  const start=Date.now();
-  const timer=setInterval(()=>{
-    const p=Math.min((Date.now()-start)/duration,1);
-    const percent=from+(to-from)*p;
-    pupil.style.left=30+(percent/100)*60+'px';
-    if(p>=1) clearInterval(timer);
-  },50);
-}
-
 function finalizeCheck(code){
   overlay.classList.remove('active');
+
   let wrong=0;
   code.forEach((v,i)=>{ if(v!==correct[i]) wrong++; });
 
   if(wrong===0){
-    good.play();
-    result.innerHTML='✅ Code correct!';
-    lines.innerHTML=`(bouwpatroon zoals aangeleverd)`;
+    goodSound();
+    result.innerHTML='✅ Code correct';
+    lines.innerHTML=`1) 6 niks, 4 blauw, 6 niks
+
+2) 5 niks, 1 blauw, 3 roze, 1 blauw, 6 niks
+
+3) 4 niks, 1 blauw, 2 roze, 2 blauw, 7 niks
+
+4) 3 niks, 1 blauw, 1 groen, 1 geel, 2 groen, 1 blauw, 7 niks
+
+5) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 1 blauw, 1 niks, 4 blauw, 1 niks
+
+6) 2 niks, 1 blauw, 1 groen, 1 blauw, 1 geel, 1 blauw, 1 geel, 1 groen, 2 blauw, 1 groen, 2 geel, 1 groen, 1 blauw
+
+7) 1 niks, 1 blauw, 2 oranje, 1 groen, 4 geel, 1 blauw, 1 groen, 1 geel, 1 groen, 1 geel, 1 groen, 1 blauw
+
+8) 2 niks, 2 blauw, 5 geel, 1 groen, 4 geel, 1 blauw, 1 niks
+
+9) 1 niks, 1 blauw, 2 groen, 3 geel, 2 groen, 3 geel, 1 groen, 2 geel, 1 blauw
+
+10) 1 blauw, 2 groen, 5 geel, 1 groen, 1 blauw, 1 geel, 1 groen, 1 blauw, 2 geel, 1 blauw
+
+11) 1 blauw, 3 groen, 1 geel, 1 groen, 3 geel, 1 groen, 2 blauw, 1 groen, 1 geel, 1 blauw, 1 niks
+
+12) 1 blauw, 2 groen, 1 geel, 1 groen, 1 geel, 1 groen, 7 geel, 1 blauw, 1 niks
+
+13) 1 niks, 2 blauw, 1 groen, 8 geel, 1 groen, 1 blauw, 2 niks
+
+14) 2 niks, 2 blauw, 1 groen, 5 geel, 2 groen, 2 blauw, 2 niks
+
+15) 3 niks, 10 blauw, 3 niks
+
+16) 2 niks, 1 blauw, 3 oranje, 1 blauw, 3 oranje, 1 blauw, 5 niks`;
     tipBtn.style.display='inline-block';
   } else {
-    bad.play();
+    badSound();
     result.innerHTML=`❌ Code incorrect — ${wrong} cijfer(s) fout`;
   }
 }
